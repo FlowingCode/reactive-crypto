@@ -1,0 +1,19 @@
+.price-up::after {
+	padding-left: 5px;
+	font-family: lumo-icons;
+	content: var(--lumo-icons-arrow-up);
+	color: green;
+}
+
+.price-down::after {
+	padding-left: 5px;
+	font-family: lumo-icons;
+	content: var(--lumo-icons-arrow-down);
+	color: red;
+}
+
+.price-equal::after {
+	padding-left: 5px;
+	content: '=';
+	color: orange;
+}
