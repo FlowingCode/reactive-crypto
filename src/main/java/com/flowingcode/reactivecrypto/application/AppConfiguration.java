@@ -30,36 +30,12 @@ public class AppConfiguration {
     }
 
     @Bean
-    ObjectMapper objectMapper() {
-        return new ObjectMapper()
-                .configure(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS, false)
-                .registerModule(new JavaTimeModule());
-    }
-
-    @Bean
-    MappingJackson2HttpMessageConverter mappingJackson2HttpMessageConverter() {
-        MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
-        converter.setObjectMapper(objectMapper());
-        return converter;
-    }
-
-    @Bean
     WebClient finnhubWebClient(@Value("${api.finnhub.base.endpoint}") String baseUrl,
             @Value("${api.finnhub.token}") String token,
             WebClient.Builder webClientBuilder) {
         return webClientBuilder.baseUrl(baseUrl)
                 .defaultHeader("X-Finnhub-Token", token)
                 .build();
-    }
-
-    @Bean
-    Jackson2JsonDecoder jackson2JsonDecoder() {
-        return new Jackson2JsonDecoder(objectMapper());
-    }
-
-    @Bean
-    Jackson2JsonEncoder jackson2JsonEncoder() {
-        return new Jackson2JsonEncoder(objectMapper());
     }
 
     /**
@@ -101,6 +77,30 @@ public class AppConfiguration {
     @Bean
     Flux<Trade> priceFlux() {
         return priceSink().asFlux();
+    }
+
+    @Bean
+    ObjectMapper objectMapper() {
+        return new ObjectMapper()
+                .configure(DeserializationFeature.READ_DATE_TIMESTAMPS_AS_NANOSECONDS, false)
+                .registerModule(new JavaTimeModule());
+    }
+
+    @Bean
+    MappingJackson2HttpMessageConverter mappingJackson2HttpMessageConverter() {
+        MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
+        converter.setObjectMapper(objectMapper());
+        return converter;
+    }
+
+    @Bean
+    Jackson2JsonDecoder jackson2JsonDecoder() {
+        return new Jackson2JsonDecoder(objectMapper());
+    }
+
+    @Bean
+    Jackson2JsonEncoder jackson2JsonEncoder() {
+        return new Jackson2JsonEncoder(objectMapper());
     }
 
 }
