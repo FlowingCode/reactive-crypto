@@ -34,40 +34,36 @@ public class PriceFluxSubscriptionContext {
     private final Map<String, List<CryptoPricesSubscriber>> subscribers = new ConcurrentHashMap<>();
 
     public SubscriptionResult subscribe(String symbol, CryptoPricesSubscriber subscriber) {
-        synchronized (subscribers) {
-            var symbolSubscribers = subscribers.computeIfAbsent(symbol, key -> new CopyOnWriteArrayList<>());
-            symbolSubscribers.add(subscriber);
+        var symbolSubscribers = subscribers.computeIfAbsent(symbol, key -> new CopyOnWriteArrayList<>());
+        symbolSubscribers.add(subscriber);
 
-            var emitResult = EmitResult.OK;
+        var emitResult = EmitResult.OK;
 
-            if (symbolSubscribers.size() == 1) {
-                // emit request only if this is the first subscriber
-                emitResult = requestSink.tryEmitNext(SymbolRequest.subscribe(symbol));
-            }
-
-            if (emitResult.isSuccess()) {
-                subscriber.subscribe(priceFlux, symbol);
-                return SubscriptionResult.ok();
-            }
-
-            return SubscriptionResult.error();
+        if (symbolSubscribers.size() == 1) {
+            // emit request only if this is the first subscriber
+            emitResult = requestSink.tryEmitNext(SymbolRequest.subscribe(symbol));
         }
+
+        if (emitResult.isSuccess()) {
+            subscriber.subscribe(priceFlux, symbol);
+            return SubscriptionResult.ok();
+        }
+
+        return SubscriptionResult.error();
     }
 
     public void unsubscribe(String symbol, CryptoPricesSubscriber subscriber) {
-        synchronized (subscribers) {
-            var symbolSubscribers = subscribers.get(symbol);
+        var symbolSubscribers = subscribers.get(symbol);
 
-            if (symbolSubscribers != null) {
-                symbolSubscribers.remove(subscriber);
-                if (symbolSubscribers.isEmpty()) {
-                    // emit an unsubscribe request if symbol has no more subscribers
-                    requestSink.tryEmitNext(SymbolRequest.unsubscribe(symbol));
-                }
+        if (symbolSubscribers != null) {
+            symbolSubscribers.remove(subscriber);
+            if (symbolSubscribers.isEmpty()) {
+                // emit an unsubscribe request if symbol has no more subscribers
+                requestSink.tryEmitNext(SymbolRequest.unsubscribe(symbol));
             }
-
-            subscriber.unsubscribe();
         }
+
+        subscriber.unsubscribe();
     }
 
     public static class SubscriptionResult {
