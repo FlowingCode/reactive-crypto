@@ -8,7 +8,6 @@ import org.vaadin.artur.helpers.LaunchUtil;
 import com.vaadin.flow.component.dependency.NpmPackage;
 import com.vaadin.flow.component.page.AppShellConfigurator;
 import com.vaadin.flow.component.page.Push;
-import com.vaadin.flow.server.AppShellSettings;
 import com.vaadin.flow.server.PWA;
 import com.vaadin.flow.theme.Theme;
 
@@ -27,12 +26,6 @@ public class ReactiveCryptoApplication extends SpringBootServletInitializer impl
 
     public static void main(String[] args) {
         LaunchUtil.launchBrowserInDevelopmentMode(SpringApplication.run(ReactiveCryptoApplication.class, args));
-    }
-
-    @Override
-    public void configurePage(AppShellSettings settings) {
-        // settings.addLink("shortcut icon", "images/logo.png");
-        // settings.addFavIcon("icon", "images/logo.png", "48x48");
     }
 
 }
