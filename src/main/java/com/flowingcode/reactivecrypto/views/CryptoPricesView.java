@@ -13,7 +13,9 @@ import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
-import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.formlayout.FormLayout;
+import com.vaadin.flow.component.formlayout.FormLayout.ResponsiveStep;
+import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
@@ -53,6 +55,8 @@ public class CryptoPricesView extends VerticalLayout implements CryptoPricesSubs
         this.exchangeService = exchangeService;
 
         setPadding(true);
+        setMaxWidth("800px");
+        getStyle().set("margin", "10px auto 0 auto");
 
         pricePanel = new PricePanel();
 
@@ -60,9 +64,12 @@ public class CryptoPricesView extends VerticalLayout implements CryptoPricesSubs
         subscribeButton.setEnabled(false);
 
         exchangesComboBox = new ComboBox<>("Exchange");
+        exchangesComboBox.setWidthFull();
 
         symbolsComboBox = new ComboBox<>("Crypto");
         symbolsComboBox.setItemLabelGenerator(CryptoSymbol::getDisplaySymbol);
+        symbolsComboBox.setWidthFull();
+        symbolsComboBox.setEnabled(false);
 
         exchangesComboBox.addValueChangeListener(e -> {
             symbolService.getSymbols(e.getValue(), symbols -> getUI().ifPresent(ui -> ui.access(() -> {
@@ -78,6 +85,9 @@ public class CryptoPricesView extends VerticalLayout implements CryptoPricesSubs
             subscribeButton.focus();
         });
 
+        var formLayout = new FormLayout(exchangesComboBox, symbolsComboBox);
+        formLayout.setResponsiveSteps(new ResponsiveStep("640px", 2));
+
         unsubscribeButton = new Button("Unsubscribe");
 
         progressBar = new ProgressBar();
@@ -88,9 +98,12 @@ public class CryptoPricesView extends VerticalLayout implements CryptoPricesSubs
         logo.setWidth("60px");
         logo.setHeight("60px");
 
-        add(new HorizontalLayout(logo, new H3("Realtime Crypto prices with Vaadin and Spring Reactive")),
-                new HorizontalLayout(exchangesComboBox, symbolsComboBox),
-                subscribeButton, unsubscribeButton, progressBar);
+        var title = new H1("Realtime Crypto prices with Vaadin and Spring Reactive");
+
+        var titleLayout = new HorizontalLayout(logo, title);
+        titleLayout.setDefaultVerticalComponentAlignment(Alignment.CENTER);
+
+        add(titleLayout, formLayout, subscribeButton, unsubscribeButton, progressBar);
 
         subscribeButton.addClickListener(e -> {
             var result = subscriptionContext.subscribe(getSymbol(), this);
@@ -98,7 +111,6 @@ public class CryptoPricesView extends VerticalLayout implements CryptoPricesSubs
                 subscribeButton.setVisible(true);
                 unsubscribeButton.setVisible(false);
                 progressBar.setVisible(false);
-                // remove(pricePanel);
             }
         });
 
@@ -126,18 +138,21 @@ public class CryptoPricesView extends VerticalLayout implements CryptoPricesSubs
     }
 
     @Override
-    public void subscribe(Flux<Trade> cryptoPrices, String symbol) {
+    public void subscribe(Flux<Trade> priceFlux, String symbol) {
         progressBar.setVisible(true);
         subscribeButton.setVisible(false);
         unsubscribeButton.setVisible(true);
+        exchangesComboBox.setEnabled(false);
+        symbolsComboBox.setEnabled(false);
 
-        var priceSubscription = cryptoPrices.subscribe(trade -> getUI().ifPresent(ui -> ui.access(() -> {
+        var priceSubscription = priceFlux.subscribe(trade -> getUI().ifPresent(ui -> ui.access(() -> {
             if (trade.getSymbol().equals(symbol)) {
                 progressBar.setVisible(false);
 
                 pricePanel.setValue(trade);
                 if (!pricePanel.isAttached()) {
                     add(pricePanel);
+                    setAlignSelf(Alignment.CENTER, pricePanel);
                 }
             }
         })));
@@ -155,6 +170,8 @@ public class CryptoPricesView extends VerticalLayout implements CryptoPricesSubs
         unsubscribeButton.setVisible(false);
         subscribeButton.setVisible(true);
         progressBar.setVisible(false);
+        exchangesComboBox.setEnabled(true);
+        symbolsComboBox.setEnabled(true);
     }
 
     private String getSymbol() {
