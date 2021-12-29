@@ -17,3 +17,10 @@
 	content: '=';
 	color: orange;
 }
+
+.price-panel {
+	box-shadow: var(--lumo-box-shadow-s);
+	font-size: var(--lumo-font-size-xl);
+	width: 210px;
+	height: 80px;
+}
