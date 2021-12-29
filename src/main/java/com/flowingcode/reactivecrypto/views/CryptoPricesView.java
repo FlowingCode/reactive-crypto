@@ -1,18 +1,20 @@
 package com.flowingcode.reactivecrypto.views;
 
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Optional;
 
-import com.flowingcode.reactivecrypto.backend.service.CryptoExchangeService;
-import com.flowingcode.reactivecrypto.backend.service.CryptoSymbolService;
-import com.flowingcode.reactivecrypto.backend.service.ReactiveStockPricesService;
+import com.flowingcode.reactivecrypto.application.CryptoPricesSubscriber;
+import com.flowingcode.reactivecrypto.application.PriceFluxSubscriptionContext;
 import com.flowingcode.reactivecrypto.model.CryptoSymbol;
+import com.flowingcode.reactivecrypto.model.Trade;
+import com.flowingcode.reactivecrypto.service.CryptoExchangeService;
+import com.flowingcode.reactivecrypto.service.CryptoSymbolService;
 import com.vaadin.flow.component.AttachEvent;
 import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
 import com.vaadin.flow.component.html.H3;
+import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.progressbar.ProgressBar;
@@ -20,10 +22,13 @@ import com.vaadin.flow.router.PageTitle;
 import com.vaadin.flow.router.Route;
 
 import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
 
 @PageTitle("Reactive Crypto")
 @Route("")
-public class CryptoPricesView extends VerticalLayout {
+public class CryptoPricesView extends VerticalLayout implements CryptoPricesSubscriber {
+
+    private final PriceFluxSubscriptionContext subscriptionContext;
 
     private final CryptoExchangeService exchangeService;
 
@@ -31,85 +36,74 @@ public class CryptoPricesView extends VerticalLayout {
 
     private final ComboBox<CryptoSymbol> symbolsComboBox;
 
-    private final Button priceButton;
+    private final Button subscribeButton;
 
-    private final Button stopButton;
-
-    private transient Disposable apiSuscription;
-
-    private final Map<String, PricePanel> pricePanels = new HashMap<>();
+    private final Button unsubscribeButton;
 
     private final ProgressBar progressBar;
 
-    public CryptoPricesView(ReactiveStockPricesService stockPricesService,
+    private final PricePanel pricePanel;
+
+    private transient Optional<Disposable> priceSubscriptionMaybe = Optional.empty();
+
+    public CryptoPricesView(PriceFluxSubscriptionContext subscriptionContext,
             CryptoExchangeService exchangeService,
             CryptoSymbolService symbolService) {
+        this.subscriptionContext = subscriptionContext;
         this.exchangeService = exchangeService;
 
         setPadding(true);
 
-        priceButton = new Button("Get price");
-        priceButton.setEnabled(false);
+        pricePanel = new PricePanel();
+
+        subscribeButton = new Button("Subscribe");
+        subscribeButton.setEnabled(false);
 
         exchangesComboBox = new ComboBox<>("Exchange");
 
-        symbolsComboBox = new ComboBox<>("Symbol");
+        symbolsComboBox = new ComboBox<>("Crypto");
         symbolsComboBox.setItemLabelGenerator(CryptoSymbol::getDisplaySymbol);
 
         exchangesComboBox.addValueChangeListener(e -> {
-            symbolsComboBox.setEnabled(e.getValue() != null);
             symbolService.getSymbols(e.getValue(), symbols -> getUI().ifPresent(ui -> ui.access(() -> {
                 symbols.sort(Comparator.comparing(CryptoSymbol::getDisplaySymbol));
                 symbolsComboBox.setItems(symbols);
+                symbolsComboBox.setEnabled(e.getValue() != null);
                 symbolsComboBox.focus();
             })));
         });
 
         symbolsComboBox.addValueChangeListener(e -> {
-            priceButton.setEnabled(e.getValue() != null);
-            priceButton.focus();
+            subscribeButton.setEnabled(e.getValue() != null);
+            subscribeButton.focus();
         });
 
-        stopButton = new Button("Stop");
+        unsubscribeButton = new Button("Unsubscribe");
 
         progressBar = new ProgressBar();
         progressBar.setVisible(false);
         progressBar.setIndeterminate(true);
 
-        add(new H3("Crypto prices with Spring Reactive"), new HorizontalLayout(exchangesComboBox, symbolsComboBox), priceButton, stopButton, progressBar);
+        var logo = new Image("images/logo.png", "Crypto");
+        logo.setWidth("60px");
+        logo.setHeight("60px");
 
-        priceButton.addClickListener(e -> {
-            progressBar.setVisible(true);
-            apiSuscription = stockPricesService.fetchStockPrices(symbolsComboBox.getValue().getSymbol(),
-                    trade -> getUI().ifPresent(ui -> ui.access(() -> {
-                        progressBar.setVisible(false);
-                        PricePanel pricePanel = pricePanels.get(trade.getSymbol());
-                        if (pricePanel == null) {
-                            pricePanel = new PricePanel();
-                            pricePanels.put(trade.getSymbol(), pricePanel);
-                            add(pricePanel);
-                        }
-                        pricePanel.update(trade);
-                    })));
-            if (apiSuscription != null) {
-                priceButton.setVisible(false);
-                stopButton.setVisible(true);
-                pricePanels.entrySet().forEach(entry -> remove(entry.getValue()));
+        add(new HorizontalLayout(logo, new H3("Realtime Crypto prices with Vaadin and Spring Reactive")),
+                new HorizontalLayout(exchangesComboBox, symbolsComboBox),
+                subscribeButton, unsubscribeButton, progressBar);
+
+        subscribeButton.addClickListener(e -> {
+            var result = subscriptionContext.subscribe(getSymbol(), this);
+            if (!result.isOk()) {
+                subscribeButton.setVisible(true);
+                unsubscribeButton.setVisible(false);
+                progressBar.setVisible(false);
+                // remove(pricePanel);
             }
         });
 
-        stopButton.setVisible(false);
-        stopButton.addClickListener(e -> {
-            if (apiSuscription != null && !apiSuscription.isDisposed()) {
-                apiSuscription.dispose();
-            }
-            apiSuscription = null;
-            stopButton.setVisible(false);
-            priceButton.setVisible(true);
-            progressBar.setVisible(false);
-            pricePanels.entrySet().forEach(entry -> remove(entry.getValue()));
-            pricePanels.clear();
-        });
+        unsubscribeButton.setVisible(false);
+        unsubscribeButton.addClickListener(e -> subscriptionContext.unsubscribe(getSymbol(), this));
 
         exchangesComboBox.focus();
     }
@@ -117,10 +111,8 @@ public class CryptoPricesView extends VerticalLayout {
     @Override
     protected void onDetach(DetachEvent detachEvent) {
         super.onDetach(detachEvent);
-        if (apiSuscription != null) {
-            apiSuscription.dispose();
-        }
-        apiSuscription = null;
+
+        subscriptionContext.unsubscribe(getSymbol(), this);
     }
 
     @Override
@@ -131,5 +123,41 @@ public class CryptoPricesView extends VerticalLayout {
             exchanges.sort(Comparator.naturalOrder());
             exchangesComboBox.setItems(exchanges);
         })));
+    }
+
+    @Override
+    public void subscribe(Flux<Trade> cryptoPrices, String symbol) {
+        progressBar.setVisible(true);
+        subscribeButton.setVisible(false);
+        unsubscribeButton.setVisible(true);
+
+        var priceSubscription = cryptoPrices.subscribe(trade -> getUI().ifPresent(ui -> ui.access(() -> {
+            if (trade.getSymbol().equals(symbol)) {
+                progressBar.setVisible(false);
+
+                pricePanel.update(trade);
+                if (!pricePanel.isAttached()) {
+                    add(pricePanel);
+                }
+            }
+        })));
+
+        // keep for later unsubscription
+        priceSubscriptionMaybe = Optional.of(priceSubscription);
+    }
+
+    @Override
+    public void unsubscribe() {
+        priceSubscriptionMaybe.ifPresent(Disposable::dispose);
+        priceSubscriptionMaybe = Optional.empty();
+
+        remove(pricePanel);
+        unsubscribeButton.setVisible(false);
+        subscribeButton.setVisible(true);
+        progressBar.setVisible(false);
+    }
+
+    private String getSymbol() {
+        return Optional.ofNullable(symbolsComboBox.getValue()).map(CryptoSymbol::getSymbol).orElse("");
     }
 }

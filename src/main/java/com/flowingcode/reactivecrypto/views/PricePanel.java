@@ -10,7 +10,7 @@ import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 
 class PricePanel extends VerticalLayout {
 
-    private final Map<Integer, String> PRICE_INDICATORS = Map.of(-1, "price-down", 0, "price-equal", 1, "price-up");
+    private final Map<Integer, String> PRICE_INDICATORS = Map.of(-1, "price-up", 0, "price-equal", 1, "price-down");
 
     private final Label symbol;
 

@@ -1,4 +1,4 @@
-package com.flowingcode.reactivecrypto.backend.service;
+package com.flowingcode.reactivecrypto.service;
 
 import java.util.Arrays;
 import java.util.List;
@@ -21,7 +21,11 @@ public class CryptoExchangeService {
     }
 
     public void getExchanges(Consumer<List<String>> consumer) {
-        webClient.get().uri(apiEnpoint).retrieve().bodyToMono(String[].class).subscribe(v -> consumer.accept(Arrays.asList(v)));
+        webClient.get()
+                .uri(apiEnpoint)
+                .retrieve()
+                .bodyToMono(String[].class)
+                .subscribe(v -> consumer.accept(Arrays.asList(v)));
     }
 
 }
