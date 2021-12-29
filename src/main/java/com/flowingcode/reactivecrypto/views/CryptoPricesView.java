@@ -135,7 +135,7 @@ public class CryptoPricesView extends VerticalLayout implements CryptoPricesSubs
             if (trade.getSymbol().equals(symbol)) {
                 progressBar.setVisible(false);
 
-                pricePanel.update(trade);
+                pricePanel.setValue(trade);
                 if (!pricePanel.isAttached()) {
                     add(pricePanel);
                 }
