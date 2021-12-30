@@ -1,0 +1,18 @@
+version: '3.1'
+
+services:
+  app:
+    build:
+        context: .
+        dockerfile: Dockerfile
+    image: reactive-crypto
+    container_name: reactive-crypto
+    restart: unless-stopped
+    networks:
+        - default
+    volumes:
+        - /srv/reactive-crypto/application.properties:/application.properties
+networks:
+    default:
+        external:
+            name: nginx
