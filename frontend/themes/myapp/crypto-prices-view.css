@@ -29,7 +29,3 @@ h1 {
 	width: 210px;
 	height: 80px;
 }
-
-vaadin-form-layout > * {
-	margin-left: 0;
-}

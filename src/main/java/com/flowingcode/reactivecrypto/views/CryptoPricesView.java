@@ -56,7 +56,7 @@ public class CryptoPricesView extends VerticalLayout implements CryptoPricesSubs
 
         setPadding(true);
         setMaxWidth("800px");
-        getStyle().set("margin", "10px auto 0 auto");
+        getStyle().set("margin", "0 auto");
 
         pricePanel = new PricePanel();
 
@@ -86,7 +86,7 @@ public class CryptoPricesView extends VerticalLayout implements CryptoPricesSubs
         });
 
         var formLayout = new FormLayout(exchangesComboBox, symbolsComboBox);
-        formLayout.setResponsiveSteps(new ResponsiveStep("640px", 2));
+        formLayout.setResponsiveSteps(new ResponsiveStep("0", 1), new ResponsiveStep("640px", 2));
 
         unsubscribeButton = new Button("Unsubscribe");
 
