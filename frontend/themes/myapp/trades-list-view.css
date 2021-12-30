@@ -1,0 +1,16 @@
+.trades-list-view .trades-panel {
+	border: 1px solid var(--lumo-contrast-20pct);
+}
+
+.trades-list-view .trades-panel .header {
+	font-size: var(--lumo-font-size-l);
+	background: var(--lumo-contrast-5pct);
+	padding: var(--lumo-space-s);
+	padding-right: var(--lumo-space-m);
+}
+
+.trades-list-view .trades-panel .trade-row {
+	font-size: var(--lumo-font-size-s);
+	padding: var(--lumo-space-s);
+	border-bottom: 1px solid var(--lumo-contrast-10pct);
+}

@@ -1,6 +1,7 @@
 package com.flowingcode.reactivecrypto.service;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.Objects;
 
 import javax.annotation.PostConstruct;
@@ -67,6 +68,7 @@ public class CryptoPricesService implements WebSocketHandler {
                 .map(TradeResponse::getTrades)
                 .filter(Objects::nonNull)
                 .flatMap(trades -> Flux.fromStream(trades.stream()))
+                .delayElements(Duration.ofMillis(500L))
                 .subscribe(priceSink::tryEmitNext);
 
         return session.send(requestFlux.map(this::map).map(session::textMessage))

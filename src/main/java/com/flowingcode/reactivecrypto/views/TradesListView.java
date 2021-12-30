@@ -1,6 +1,7 @@
 package com.flowingcode.reactivecrypto.views;
 
 import java.util.Comparator;
+import java.util.Map;
 import java.util.Optional;
 
 import com.flowingcode.reactivecrypto.application.CryptoPricesSubscriber;
@@ -10,6 +11,7 @@ import com.flowingcode.reactivecrypto.model.Trade;
 import com.flowingcode.reactivecrypto.service.CryptoExchangeService;
 import com.flowingcode.reactivecrypto.service.CryptoSymbolService;
 import com.vaadin.flow.component.AttachEvent;
+import com.vaadin.flow.component.Composite;
 import com.vaadin.flow.component.DetachEvent;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.combobox.ComboBox;
@@ -17,6 +19,9 @@ import com.vaadin.flow.component.formlayout.FormLayout;
 import com.vaadin.flow.component.formlayout.FormLayout.ResponsiveStep;
 import com.vaadin.flow.component.html.H1;
 import com.vaadin.flow.component.html.Image;
+import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.orderedlayout.FlexLayout;
+import com.vaadin.flow.component.orderedlayout.FlexLayout.FlexDirection;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.progressbar.ProgressBar;
@@ -27,8 +32,8 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 
 @PageTitle("Reactive Crypto")
-@Route("/price")
-public class CryptoPricesView extends VerticalLayout implements CryptoPricesSubscriber {
+@Route("")
+public class TradesListView extends VerticalLayout implements CryptoPricesSubscriber {
 
     private final PriceFluxSubscriptionContext subscriptionContext;
 
@@ -44,21 +49,26 @@ public class CryptoPricesView extends VerticalLayout implements CryptoPricesSubs
 
     private final ProgressBar progressBar;
 
-    private final PricePanel pricePanel;
+    private final TradesPanel tradesPanel;
 
     private transient Optional<Disposable> priceSubscriptionMaybe = Optional.empty();
 
-    public CryptoPricesView(PriceFluxSubscriptionContext subscriptionContext,
+    public TradesListView(PriceFluxSubscriptionContext subscriptionContext,
             CryptoExchangeService exchangeService,
             CryptoSymbolService symbolService) {
         this.subscriptionContext = subscriptionContext;
         this.exchangeService = exchangeService;
 
+        setClassName("trades-list-view");
+
         setPadding(true);
         setMaxWidth("800px");
+        setHeightFull();
         getStyle().set("margin", "0 auto");
 
-        pricePanel = new PricePanel();
+        tradesPanel = new TradesPanel(20);
+        setAlignSelf(Alignment.CENTER, tradesPanel);
+        setFlexGrow(1, tradesPanel);
 
         subscribeButton = new Button("Subscribe");
         subscribeButton.setEnabled(false);
@@ -103,7 +113,7 @@ public class CryptoPricesView extends VerticalLayout implements CryptoPricesSubs
         var titleLayout = new HorizontalLayout(logo, title);
         titleLayout.setDefaultVerticalComponentAlignment(Alignment.CENTER);
 
-        add(titleLayout, formLayout, subscribeButton, unsubscribeButton, progressBar);
+        add(titleLayout, formLayout, subscribeButton, unsubscribeButton, progressBar, tradesPanel);
 
         subscribeButton.addClickListener(e -> {
             var result = subscriptionContext.subscribe(getSymbol(), this);
@@ -148,12 +158,7 @@ public class CryptoPricesView extends VerticalLayout implements CryptoPricesSubs
         var priceSubscription = priceFlux.subscribe(trade -> getUI().ifPresent(ui -> ui.access(() -> {
             if (trade.getSymbol().equals(symbol)) {
                 progressBar.setVisible(false);
-
-                pricePanel.setValue(trade);
-                if (!pricePanel.isAttached()) {
-                    add(pricePanel);
-                    setAlignSelf(Alignment.CENTER, pricePanel);
-                }
+                tradesPanel.add(trade);
             }
         })));
 
@@ -166,7 +171,8 @@ public class CryptoPricesView extends VerticalLayout implements CryptoPricesSubs
         priceSubscriptionMaybe.ifPresent(Disposable::dispose);
         priceSubscriptionMaybe = Optional.empty();
 
-        remove(pricePanel);
+        // remove(tradesPanel);
+        tradesPanel.clear();
         unsubscribeButton.setVisible(false);
         subscribeButton.setVisible(true);
         progressBar.setVisible(false);
@@ -177,4 +183,72 @@ public class CryptoPricesView extends VerticalLayout implements CryptoPricesSubs
     private String getSymbol() {
         return Optional.ofNullable(symbolsComboBox.getValue()).map(CryptoSymbol::getSymbol).orElse("");
     }
+
+    private class TradesPanel extends Composite<FlexLayout> {
+
+        private final int maxItems;
+
+        private Trade previousTrade;
+
+        private final FlexLayout itemsContainer;
+
+        TradesPanel(int maxItems) {
+            this.maxItems = Math.max(1, maxItems);
+
+            var root = getContent();
+            root.setClassName("trades-panel");
+            root.setFlexDirection(FlexDirection.COLUMN);
+            root.setWidthFull();
+            root.setHeight("100px");
+
+            var header = new HorizontalLayout(new Span("Price"), new Span("Volume"));
+            header.setClassName("header");
+            header.setJustifyContentMode(JustifyContentMode.BETWEEN);
+            header.setWidthFull();
+
+            itemsContainer = new FlexLayout();
+            itemsContainer.setWidthFull();
+            itemsContainer.setFlexDirection(FlexDirection.COLUMN);
+            itemsContainer.getStyle().set("overflow-y", "auto");
+
+            root.add(header, itemsContainer);
+            root.setFlexGrow(1, itemsContainer);
+        }
+
+        void add(Trade trade) {
+            if (itemsContainer.getComponentCount() > maxItems) {
+                Optional.ofNullable(itemsContainer.getComponentAt(maxItems)).ifPresent(itemsContainer::remove);
+            }
+
+            itemsContainer.addComponentAsFirst(new TradeRow(trade, previousTrade));
+
+            previousTrade = trade;
+        }
+
+        void clear() {
+            itemsContainer.removeAll();
+        }
+
+    }
+
+    private static class TradeRow extends HorizontalLayout {
+
+        private static final Map<Integer, String> PRICE_INDICATORS = Map.of(-1, "price-up", 0, "price-equal", 1, "price-down");
+
+        TradeRow(Trade trade, Trade previousTrade) {
+            setClassName("trade-row");
+            setJustifyContentMode(JustifyContentMode.BETWEEN);
+            setWidthFull();
+
+            var price = new Span(trade.getPrice().toString());
+            if (previousTrade != null) {
+                price.setClassName(PRICE_INDICATORS.getOrDefault(previousTrade.compareTo(trade), "price-equal"));
+            }
+
+            var volume = new Span(trade.getVolume().toString());
+
+            add(price, volume);
+        }
+    }
+
 }
