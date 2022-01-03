@@ -171,7 +171,6 @@ public class TradesListView extends VerticalLayout implements CryptoPricesSubscr
         priceSubscriptionMaybe.ifPresent(Disposable::dispose);
         priceSubscriptionMaybe = Optional.empty();
 
-        // remove(tradesPanel);
         tradesPanel.clear();
         unsubscribeButton.setVisible(false);
         subscribeButton.setVisible(true);
