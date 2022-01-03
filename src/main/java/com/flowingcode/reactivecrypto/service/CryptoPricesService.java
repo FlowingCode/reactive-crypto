@@ -61,6 +61,7 @@ public class CryptoPricesService implements WebSocketHandler {
     @Override
     public Mono<Void> handle(WebSocketSession session) {
         session.receive()
+                .doOnTerminate(this::init)
                 .map(WebSocketMessage::getPayloadAsText)
                 .log()
                 .map(this::map)
