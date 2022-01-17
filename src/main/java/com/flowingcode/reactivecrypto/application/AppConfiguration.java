@@ -45,7 +45,7 @@ public class AppConfiguration {
      */
     @Bean
     Many<SymbolRequest> requestSink() {
-        return Sinks.many().multicast().onBackpressureBuffer();
+        return Sinks.many().multicast().onBackpressureBuffer(Queues.SMALL_BUFFER_SIZE, false);
     }
 
     /**
