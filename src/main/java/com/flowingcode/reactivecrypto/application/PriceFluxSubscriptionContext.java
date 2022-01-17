@@ -53,17 +53,16 @@ public class PriceFluxSubscriptionContext {
     }
 
     public void unsubscribe(String symbol, CryptoPricesSubscriber subscriber) {
-        var symbolSubscribers = subscribers.get(symbol);
-
-        if (symbolSubscribers != null) {
-            symbolSubscribers.remove(subscriber);
-            if (symbolSubscribers.isEmpty()) {
-                // emit an unsubscribe request if symbol has no more subscribers
-                requestSink.tryEmitNext(SymbolRequest.unsubscribe(symbol));
-            }
+        var symbolSubscribers = subscribers.computeIfPresent(symbol, (key, value) -> {
+            value.remove(subscriber);
+            return value;
+        });
+        subscriber.unsubscribe(symbol);
+        if (symbolSubscribers.isEmpty()) {
+            // emit an unsubscribe request if symbol has no more subscribers
+            requestSink.tryEmitNext(SymbolRequest.unsubscribe(symbol));
         }
 
-        subscriber.unsubscribe();
     }
 
     public static class SubscriptionResult {
