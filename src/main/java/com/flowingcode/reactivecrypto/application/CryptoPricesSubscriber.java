@@ -16,7 +16,9 @@ public interface CryptoPricesSubscriber {
 
     /**
      * Unsubscribe from price flux.
+     * 
+     * @param symbol crypto symbol.
      */
-    void unsubscribe();
+    void unsubscribe(String symbol);
 
 }

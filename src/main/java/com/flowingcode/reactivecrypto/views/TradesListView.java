@@ -167,7 +167,7 @@ public class TradesListView extends VerticalLayout implements CryptoPricesSubscr
     }
 
     @Override
-    public void unsubscribe() {
+    public void unsubscribe(String symbol) {
         priceSubscriptionMaybe.ifPresent(Disposable::dispose);
         priceSubscriptionMaybe = Optional.empty();
 
