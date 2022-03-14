@@ -11,7 +11,7 @@
 
     <properties>
         <java.version>11</java.version>
-        <vaadin.version>22.0.5</vaadin.version>
+        <vaadin.version>23.0.1</vaadin.version>
         <log4j2.version>2.15.0</log4j2.version>
     </properties>
 
