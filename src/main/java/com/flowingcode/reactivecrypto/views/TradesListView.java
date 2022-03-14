@@ -116,16 +116,18 @@ public class TradesListView extends VerticalLayout implements CryptoPricesSubscr
         add(titleLayout, formLayout, subscribeButton, unsubscribeButton, progressBar, tradesPanel);
 
         subscribeButton.addClickListener(e -> {
-            var result = subscriptionContext.subscribe(getSymbol(), this);
-            if (!result.isOk()) {
-                subscribeButton.setVisible(true);
-                unsubscribeButton.setVisible(false);
-                progressBar.setVisible(false);
-            }
+            getSymbol().ifPresent(symbol -> {
+                var result = subscriptionContext.subscribe(symbol, this);
+                if (!result.isOk()) {
+                    subscribeButton.setVisible(true);
+                    unsubscribeButton.setVisible(false);
+                    progressBar.setVisible(false);
+                }
+            });
         });
 
         unsubscribeButton.setVisible(false);
-        unsubscribeButton.addClickListener(e -> subscriptionContext.unsubscribe(getSymbol(), this));
+        unsubscribeButton.addClickListener(e -> getSymbol().ifPresent(symbol -> subscriptionContext.unsubscribe(symbol, this)));
 
         exchangesComboBox.focus();
     }
@@ -134,7 +136,7 @@ public class TradesListView extends VerticalLayout implements CryptoPricesSubscr
     protected void onDetach(DetachEvent detachEvent) {
         super.onDetach(detachEvent);
 
-        subscriptionContext.unsubscribe(getSymbol(), this);
+        getSymbol().ifPresent(symbol -> subscriptionContext.unsubscribe(symbol, this));
     }
 
     @Override
@@ -179,8 +181,8 @@ public class TradesListView extends VerticalLayout implements CryptoPricesSubscr
         symbolsComboBox.setEnabled(true);
     }
 
-    private String getSymbol() {
-        return Optional.ofNullable(symbolsComboBox.getValue()).map(CryptoSymbol::getSymbol).orElse("");
+    private Optional<String> getSymbol() {
+        return Optional.ofNullable(symbolsComboBox.getValue()).map(CryptoSymbol::getSymbol);
     }
 
     private class TradesPanel extends Composite<FlexLayout> {
