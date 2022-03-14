@@ -206,7 +206,6 @@
                         </executions>
                         <configuration>
                             <productionMode>true</productionMode>
-                            <pnpmEnable>true</pnpmEnable>
                         </configuration>
                     </plugin>
                 </plugins>
